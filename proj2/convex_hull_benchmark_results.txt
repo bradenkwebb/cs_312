@@ -1,0 +1,33 @@
+n = 10
+Average time: 0.0002002716064453125 seconds
+
+n = 100
+Average time: 0.0010000228881835937 seconds
+
+n = 1000
+Average time: 0.010738945007324219 seconds
+
+n = 5000
+Average time: 0.042988920211791994 seconds
+
+n = 10000
+Average time: 0.0895616054534912 seconds
+
+n = 50000
+Average time: 0.44773521423339846 seconds
+
+n = 100000
+Average time: 1.3315657138824464 seconds
+
+n = 250000
+Average time: 3.3347958087921143 seconds
+
+n = 500000
+Average time: 12.873101997375489 seconds
+
+n = 750000
+Average time: 14.62328643798828 seconds
+
+n = 1000000
+Average time: 23.900003147125243 seconds
+
