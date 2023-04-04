@@ -67,7 +67,7 @@ class TSPSolver:
 		results['max'] = None
 		results['total'] = None
 		results['pruned'] = None
-		print(f"Results for defaultRandomTour: {results}")
+		print(f"DefaultRandomTour: {results['cost']}")
 		if self._bssf is None or results['cost'] < self._bssf.cost:
 			self._bssf = bssf
 		return results
@@ -90,6 +90,7 @@ class TSPSolver:
 		cities = self._scenario.getCities()
 		costMatrix = TSPCostMatrix(cities)
 		S = []
+		bssf = None
 		heappush(S, costMatrix)
 		start_time = time.time()
 		while S and time.time() - start_time < time_allowance:
@@ -119,7 +120,7 @@ class TSPSolver:
 
 		end_time = time.time()
 		results = {}
-		results['cost'] = bssf.cost
+		results['cost'] = bssf.cost if bssf else math.inf
 		results['time'] = end_time - start_time
 		results['count'] = 0
 		results['soln'] = bssf
@@ -130,67 +131,6 @@ class TSPSolver:
 		if self._bssf is None or results['cost'] < self._bssf.cost:
 			self._bssf = bssf
 		return results
-
-
-		# cities = self._scenario.getCities()
-		# bssf = None
-		# start_time = time.time()
-		
-		# for start_city in sorted(cities, key= lambda x: x._name):
-		# 	results = {}
-		# 	visited = set()
-		# 	ignore = set()
-		# 	not_visited = set(cities)
-			
-		# 	cur_city = start_city
-		# 	route = [cur_city]
-		# 	visited.add(cur_city)
-		# 	not_visited.remove(cur_city)
-
-		# 	while not_visited and time.time() - start_time < time_allowance:
-		# 		next = min(not_visited.difference(ignore), key = lambda x: cur_city.costTo(x), default=None)
-		# 		if next == None: # this should happen only if the city can't reach any of the other cities
-		# 			prev_city = route.pop()
-		# 			not_visited.add(prev_city)
-		# 			visited.remove(prev_city)
-		# 			ignore.clear()
-		# 			ignore.add(cur_city)
-		# 			cur_city = route[-1]
-		# 		if cur_city.costTo(next) == math.inf:
-		# 			ignore.add(next)
-		# 			prev_city = route.pop()
-		# 			not_visited.add(prev_city)
-		# 			visited.remove(prev_city)
-		# 			cur_city = route[-1]
-		# 			continue
-		# 		else:
-		# 			ignore.clear()
-		# 		visited.add(next)
-		# 		not_visited.remove(next)
-		# 		route.append(next)
-		# 		cur_city = next
-			
-		# 	print(f"start_city: {start_city._name}")
-		# 	print(f"route at end: {[city._name for city in route]}")
-		# 	if len(route) == len(cities):
-		# 		if route[-1].costTo(route[0]) < math.inf:
-		# 			break
-		# print([city._name for city in route])
-		# bssf = TSPSolution(route)
-		# end_time = time.time()
-		
-		# results['cost'] = bssf.cost
-		# results['time'] = end_time - start_time
-		# results['count'] = 0 #maybe this should just be 0
-		# results['soln'] = bssf
-		# results['max'] = None
-		# results['total'] = None
-		# results['pruned'] = None
-		# print(f"Results for greedy: {results}")
-		# if self._bssf is None or results['cost'] < self._bssf.cost:
-		# 	self._bssf = bssf
-		# return results
-
 
 	''' <summary>
 		This is the entry point for the branch-and-bound algorithm that you will implement
@@ -209,10 +149,13 @@ class TSPSolver:
 		intNodeCount = 0
 		maxQueueSize = 0
 		S = []
-		heappush(S, costMatrix)
 		start_time = time.time()
-		bssf = self.greedy(time_allowance=time_allowance)['soln']
-		i = 0
+		bssf = self.greedy(time_allowance=time_allowance)['soln']		
+		if bssf is None:
+			print("Greedy failed to find a solution")
+		else:
+			heappush(S, costMatrix)
+		i = 0	
 		while S and time.time() - start_time < time_allowance:
 			i += 1
 			maxQueueSize = max(maxQueueSize, len(S))
@@ -236,14 +179,17 @@ class TSPSolver:
 						pruneCount += 1
 			else:
 				pruneCount += 1
-			if i % 200 == 0:
+			if i % 1000 == 0:
 				assert stateCount - solnCount - pruneCount - intNodeCount - len(S) == 0, "stateCount - solnCount - pruneCount - intNodeCount - len(S) != 0"
 				print(f"i: {i}\tlen(S): {len(S)}\tmaxQueueSize: {maxQueueSize}\tstateCount: {stateCount}\tpruneCount: {pruneCount}\tintNodeCount: {intNodeCount}\tsolnCount: {solnCount}\tbssf: {bssf.cost}")
-		
 		end_time = time.time()
+		elapsed_time = end_time - start_time
+		if elapsed_time > time_allowance and bssf:
+			pruneCount += len([state for state in S if state.cost > bssf.cost])
+
 		results = {}
-		results['cost'] = bssf.cost
-		results['time'] = end_time - start_time
+		results['cost'] = bssf.cost if bssf else math.inf
+		results['time'] = elapsed_time
 		results['count'] = solnCount
 		results['soln'] = bssf
 		results['max'] = maxQueueSize
@@ -252,6 +198,8 @@ class TSPSolver:
 		print(f"Results for branch and bound: {results}")
 		if self._bssf is None or results['cost'] < self._bssf.cost:
 			self._bssf = bssf
+		elif bssf is not None and len(S) == 0:
+			print("Optimal result!!!")
 		return results
 	
 	def _expand(self, costMatrix):
@@ -262,7 +210,7 @@ class TSPSolver:
 				newMatrix = copy.deepcopy(costMatrix)
 				newMatrix.addCity(cityIndex)
 				states.append(newMatrix)
-		return sorted(states)
+		return sorted(states) # maybe don't sort?
 
 
 	''' <summary>
