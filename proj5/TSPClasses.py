@@ -6,7 +6,14 @@ import numpy as np
 import random
 import time
 
+
+
 class TSPCostMatrix:
+	""" 
+	Initializes a cost matrix for the TSP problem with the given cities.
+	The process of initialization has time complexity O(n^2) in the number of cities,
+	and space complexity O(n^2).
+	"""
 	def __init__(self, cities):
 		self.path = [0]
 		self.cost = 0
@@ -19,22 +26,40 @@ class TSPCostMatrix:
 					self.matrix[row][col] = math.inf
 		self.reduceMatrix()
 
+	"""
+	Reduces the cost matrix by subtracting the minimum value in each row and column.
+	In general, this has time complexity of 2*O(n)*O(np-subtraction-broadcasting). Most ways
+	that I can think of implementing numpy broadcasting, in order to calculate each
+	'row -= minVal' expression, likely require O(n) time. As such, if (in the worst) case
+	we have to do this n times because each row and each column has a finite value, then
+	the time complexity is O(n^2). The space complexity is O(1).
+	"""
 	def reduceMatrix(self):
 		for row in self.matrix:
 			minVal = min(row)
 			if minVal < math.inf:
-				row -= minVal
+				row -= minVal # probably O(n)
 				self.cost += minVal
 
 		for col in self.matrix.T:
 			minVal = min(col)
 			if minVal < math.inf:
-				col -= minVal
+				col -= minVal # probably O(n)
 				self.cost += minVal
 	
+	""" 
+	The heuristic used to determine the order in which states are removed from the priority queue.
+	We want to remove states that are deepest in the search tree first, and when there is a tie,
+	prioritize those with the lowest cost. This has time complexity O(1) and space complexity O(1).
+	"""
 	def compVal(self):
 		return (-len(self.path), self.cost)
-
+	
+	""" 
+	This method calculates the new state obtained by adding the given city to the current state.
+	This has time complexity O(n) + O(reduceMatrix) = O(n^2) in the number of cities, 
+	and space complexity O(1).
+	"""
 	def addCity(self, city):
 		rowIndex = self.path[-1]
 		colIndex = city
@@ -47,6 +72,10 @@ class TSPCostMatrix:
 		self.matrix[colIndex][rowIndex] = math.inf # we can't return to the city we just came from
 		self.reduceMatrix()
 
+	""" 
+	This method returns the route represented by the current state as a list of cities.
+	This has time complexity O(n) in the number of cities, and space complexity O(n).
+	"""
 	def getRoute(self, originalCities):
 		route = []
 		for cityIndex in self.path:
@@ -76,6 +105,12 @@ class TSPCostMatrix:
 	def __str__(self):
 		return str(self.matrix)
 	
+class GreedyMatrix(TSPCostMatrix):
+	def __init__(self, cities):
+		super().__init__(cities)
+	
+	def compVal(self):
+		return self.cost
 		
 
 class TSPSolution:

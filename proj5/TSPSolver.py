@@ -74,10 +74,22 @@ class TSPSolver:
 
 
 	''' <summary>
-		This is the entry point for the greedy solver, which you must implement for
-		the group project (but it is probably a good idea to just do it for the branch-and
-		bound project as a way to get your feet wet).  Note this could be used to find your
-		initial BSSF.
+		This algorithm finds a (generally sub-optimal) solution to the TSP. It returns the first solution it finds,
+		and while it is somewhat greedy, it is not actually as greedy as it could be - it instead uses the same general
+		heuristic that I use in the branch-and-bound algorithm, always picking the state closest to a solution, and only
+		then optimizing for cost. It is a branching algorithm without bound, that prioritizes deep, low-cost states. 
+		This is a good algorithm to use as a baseline for comparison, as it is very fast and relatively simple to implement.
+
+		The time and space complexity of this algorithm depend largely on the sparsity of the graph. If the graph is
+		very sparse and asymmetric, then the algorithm will have to search a large number of states, and will have a high time complexity.
+		If the graph is very dense, then almost any state of sufficient depth will be a solution, and the algorithm will
+		have a lower time complexity.
+
+		If we were searching for the optimal solution, I calculate that in the worst case, there are O(n!) states, where n is the
+		number of cities, which could need to be searched. However, since we terminate as soon as we find a solution, the time complexity
+		is much closer to O(n)*O(self._expand()) = O(n^4), and we see such polynomial-time behavior empirically as well. The space
+		complexity is O(n^3), since we store a matrix of size n^2 for each state, and we store a queue of these states that shrinks
+		and grows as we search the tree.
 		</summary>
 		<returns>results dictionary for GUI that contains three ints: cost of best solution,
 		time spent to find best solution, total number of solutions found, the best
@@ -85,55 +97,54 @@ class TSPSolver:
 		algorithm</returns>
 	'''
 	def greedy( self, time_allowance=60.0):
-		## I need to come back to this! Not working with seed 999, prob size 15, hard (deterministic)
-
+		results = {}
+		results['max'] = None
+		results['total'] = None
+		results['pruned'] = None
+		results['count'] = 0
+		bssf = None
 		cities = self._scenario.getCities()
-		costMatrix = TSPCostMatrix(cities)
 		S = []
 		bssf = None
-		heappush(S, costMatrix)
+		heappush(S, TSPCostMatrix(cities))
+
 		start_time = time.time()
-		while S and time.time() - start_time < time_allowance:
+		while S and time.time() - start_time < time_allowance: 
 			P = heappop(S)
-			states = self._expand(P)
-			for state in states:
+			states = self._expand(P) # O(n^3)
+			for state in states: # In the worst case, this is O(n) in the number of states
 				if len(state.path) == len(cities):
 					potSolution = TSPSolution(state.getRoute(cities))
 					if potSolution.cost < math.inf:
 						bssf = potSolution
 						print(f"new bssf found: {bssf.cost}")
-						end_time = time.time()
-						results = {}
-						results['cost'] = bssf.cost
-						results['time'] = end_time - start_time
-						results['count'] = 0
-						results['soln'] = bssf
-						results['max'] = None
-						results['total'] = None
-						results['pruned'] = None
-						print(f"Results for branch and bound: {results}")
-						if self._bssf is None or results['cost'] < self._bssf.cost:
-							self._bssf = bssf
-						return results
+						S.clear() # this allows us to break out of both loops
+						break
 				else:
 					heappush(S, state)
-
 		end_time = time.time()
-		results = {}
+
 		results['cost'] = bssf.cost if bssf else math.inf
 		results['time'] = end_time - start_time
-		results['count'] = 0
 		results['soln'] = bssf
-		results['max'] = None
-		results['total'] = None
-		results['pruned'] = None
-		print(f"Results for branch and bound: {results}")
+		print(f"Greedy: {results}")
 		if self._bssf is None or results['cost'] < self._bssf.cost:
 			self._bssf = bssf
 		return results
 
 	''' <summary>
-		This is the entry point for the branch-and-bound algorithm that you will implement
+		This method actually runs the Branch-and-Bound algorithm, to find an optimal solution to the TSP if given
+		enough time, or a high-quality sub-optimal approximation if given less time. It uses a priority queue to store
+		states of partial solutions, and it expands the state closest to a solution, and with the lowest cost, first.
+		The algorithm first calls the greedy algorithm to find a solution, and then uses that solution as the initial
+		best-solution-so-far (BSSF). It uses the cost of that BSSF as a bound on the cost of any other solution, allowing
+		it to prune states that are not worth exploring. 
+		
+		In the worst-case scenario, as in the greedy algorithm, the algorithm will have to search O(n!) states, where n is the
+		number of cities. However, in practice, the algorithm will terminate much sooner, as it will prune many states that
+		are not worth exploring. The exact time complexity is difficult to calculate, but it empirically seems to be
+		exponential and of the form O(c^n) for some constant c. The space complexity is O(n^3), since we store a matrix of
+		size n^2 for each state, and the size of the priority queue is shown empirically to grow linearly with n.
 		</summary>
 		<returns>results dictionary for GUI that contains three ints: cost of best solution,
 		time spent to find best solution, total number solutions found during search (does
@@ -142,75 +153,70 @@ class TSPSolver:
 	'''
 	def branchAndBound( self, time_allowance=60.0 ):
 		cities = self._scenario.getCities()
-		costMatrix = TSPCostMatrix(cities)
-		pruneCount = 0
-		stateCount = 1
-		solnCount = 0
-		intNodeCount = 0
-		maxQueueSize = 0
 		S = []
 		start_time = time.time()
-		bssf = self.greedy(time_allowance=time_allowance)['soln']		
+		results = self.greedy(time_allowance=time_allowance)
+		results['count'] = 0
+		results['max'] = 0
+		results['total'] = 1
+		results['pruned'] = 0
+		bssf = results['soln']
 		if bssf is None:
 			print("Greedy failed to find a solution")
 		else:
-			heappush(S, costMatrix)
-		i = 0	
-		while S and time.time() - start_time < time_allowance:
-			i += 1
-			maxQueueSize = max(maxQueueSize, len(S))
+			heappush(S, TSPCostMatrix(cities))
+		while S and time.time() - start_time < time_allowance: # Exponential, O(c^n) for some constant c
+			results['max'] = max(results['max'], len(S))
 			P = heappop(S)
 			if P.cost < bssf.cost:
-				states = self._expand(P)
-				stateCount += len(states)
-				intNodeCount += 1
-				for state in states:
+				states = self._expand(P) # O(n^3)
+				results['total'] += len(states)
+				for state in states: # O(n)
 					if len(state.path) == len(cities):
 						potSolution = TSPSolution(state.getRoute(cities))
 						if potSolution.cost < bssf.cost:
 							bssf = potSolution
 							print(f"new bssf found: {bssf.cost}")
-							solnCount += 1
+							results['count'] += 1
 						else:
-							pruneCount += 1
+							results['pruned'] += 1
 					elif state.cost < bssf.cost:
 						heappush(S, state)
 					else:
-						pruneCount += 1
+						results['pruned'] += 1
 			else:
-				pruneCount += 1
-			if i % 1000 == 0:
-				assert stateCount - solnCount - pruneCount - intNodeCount - len(S) == 0, "stateCount - solnCount - pruneCount - intNodeCount - len(S) != 0"
-				print(f"i: {i}\tlen(S): {len(S)}\tmaxQueueSize: {maxQueueSize}\tstateCount: {stateCount}\tpruneCount: {pruneCount}\tintNodeCount: {intNodeCount}\tsolnCount: {solnCount}\tbssf: {bssf.cost}")
+				results['pruned'] += 1
 		end_time = time.time()
 		elapsed_time = end_time - start_time
 		if elapsed_time > time_allowance and bssf:
-			pruneCount += len([state for state in S if state.cost > bssf.cost])
-
-		results = {}
-		results['cost'] = bssf.cost if bssf else math.inf
+			results['pruned'] += len([state for state in S if state.cost > bssf.cost])
 		results['time'] = elapsed_time
-		results['count'] = solnCount
 		results['soln'] = bssf
-		results['max'] = maxQueueSize
-		results['total'] = stateCount
-		results['pruned'] = pruneCount
-		print(f"Results for branch and bound: {results}")
-		if self._bssf is None or results['cost'] < self._bssf.cost:
-			self._bssf = bssf
-		elif bssf is not None and len(S) == 0:
+		results['cost'] = bssf.cost if bssf else math.inf
+		print(f"Branch and Bound: {results}")
+		self._bssf = bssf
+		if bssf is not None and len(S) == 0 and elapsed_time < time_allowance:
 			print("Optimal result!!!")
 		return results
 	
+	''' 
+	This takes a cost matrix and returns a list of all possible states that can be reached from it
+	that have a finite cost. This is a helper function for the branch and bound algorithm. Since it
+	loops through all possible edges in the graph from the most recent city in the path, it has a time
+	complexity of O(n)*O(TSPCostMatrix.addCity) = O(n)*O(n^2) = O(n^3). 
+	The space complexity is, in the worst case, also O(n)*O(TSPCostMatrix) = O(n)(O(n^2)) = O(n^3), as it 
+	must store a copy of the cost matrix for each possible state.
+	'''
 	def _expand(self, costMatrix):
 		states = []
 		mostRecentCityIndex = costMatrix.path[-1]
-		for cityIndex in range(len(costMatrix.matrix[mostRecentCityIndex])):
+		for cityIndex in range(len(costMatrix.matrix[mostRecentCityIndex])): # O(n)
 			if costMatrix.matrix[mostRecentCityIndex][cityIndex] < math.inf:
-				newMatrix = copy.deepcopy(costMatrix)
-				newMatrix.addCity(cityIndex)
+				newMatrix = copy.deepcopy(costMatrix) # O(n^2)
+				newMatrix.addCity(cityIndex) # O(n^2)
 				states.append(newMatrix)
-		return sorted(states) # maybe don't sort?
+		return states
+
 
 
 	''' <summary>
