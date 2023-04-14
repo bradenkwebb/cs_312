@@ -11,3 +11,6 @@ proj4/.vscode/
 proj4/__pycache__/
 proj5/__MACOSX/
 proj5/__pycache__/
+group_tsp_report/main.fdb_latexmk
+group_tsp_report/main.fls
+group_tsp_report/main.synctex.gz
