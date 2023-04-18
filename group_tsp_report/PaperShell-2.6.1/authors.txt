@@ -1,0 +1,35 @@
+# Metadata that will be used to create the paper's various preambles
+# Any empty line, and any line beginning with # is ignored.
+
+# The first non-ignored line of the file must contain the document's title.
+# It can contain any LaTeX code that is permitted in the \title{} command
+
+An Exploration of Ant Colony Optimization in the Travelling Salesperson Problem
+
+# What remains of the file is the list of authors and affiliations.
+# Author lines end with (x), where x is the number associated with the
+# author's affiliation. The author's e-mail address and ORCID can follow,
+# separated by a comma. These fields are optional.
+
+{Braden} {Webb} (1) bkwebb23@gmail.com
+{Caden} {Brinkman} (1) cadenbrinkman@gmail.com
+{Gavin} {Bolin} (1) gavinbolin3411@gmail.com
+
+# Affiliation lines begin with a single digit (indictating the affiliation)
+# Any following line is appended to the affiliation.
+# The first line after the number should be the institution.
+# For ACM publications, please define the remaining elements of
+# the address in settings.inc.php.
+
+#1
+#Mathematics, Brigham Young University
+#
+#2
+#Computer Engineering
+#Brigham Young University
+#
+#3
+#Computer Science
+#Brigham Young University
+#
+#
