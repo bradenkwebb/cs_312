@@ -30,7 +30,13 @@
 %% ---------------------------
 \section{Introduction} %% {{{
 
-We chose to implement the ant colony algorithm because of its use of randomness and probability which allow convergence to an optimal solution without getting rid of diversity in the population. It was similar to a Genetic Algorithm approach but used probability at every step instead of probability between switching confirmed paths.
+We chose to implement the ant colony algorithm because its inherently stochastic
+nature felt different from many of the other algorithms that we've worked with
+in this class. Although genetic algorithm approaches are also probabilistic, ACO
+algorithsm differ because they are multi-agent algorithms that introduce randomness
+at each decision point in an agent's path, rather than at the stages of mutation and
+crossover in a genetic algorithm. This makes ACO algorithms quite difficult to analyze,
+but also makes them more flexible and adaptable to different problem domains.
 
 %% }}} --- Section
 
@@ -39,18 +45,50 @@ We chose to implement the ant colony algorithm because of its use of randomness 
 %% ---------------------------
 \section{Algorithm Explanation} %% {{{
 
+As baseline algorithms for comparison, we used the ``default'' algorithm, which
+finds a valid random solution to the TSP as provided in the original boilerplate
+code for project 5, and a greedy algorithm. We also used the best branch-and-Bound
+algorithm from project 5 as a baseline for comparison. Within this report, we
+will not discuss the default algorithm or the branch-and-Bound algorithm in detail,
+but we will discuss the greedy algorithm and the ACO algorithm below---particularly
+since the greedy algorithm forms the first step of the ACO algorithm.
+
 \subsection*{Greedy}
-Our Greedy algorithm simply takes the smallest edge cost branching out of the current node we are at until all nodes are visited and we make a complete loop.
+Our greedy algorithm simply takes the smallest edge cost branching out of the
+current node we are at until all nodes are visited and we make a complete loop.
+The starting city is chosen randomly, and if the path is not valid, we choose
+a new starting city, looping through all possible starting cities until a
+solution is found. While we eventually came to appreciate the quality of most
+of these solutions (especially considering how quickly the algorithm runs), they
+are almost never optimal.
 
 \subsection*{Ant Colony Optimization Algorithm (ACO)}
-The ant colony algorithm \cite{Skinderowicz_2022} mimics ants and their use of pheromones in order to locate potential food sources. This is done by detecting the concentration of each pheromone for each path and choosing based on probability the path with more pheromone. The pheromone for each path decreases as ‘time’ goes on.
+We originally became interested in this algorithm when we stumbled across the
+work of \cite{Skinderowicz_2022} from 2022. We thought it would be interesting
+to implement their state-of-the-art ``Focused ACO'' algorithm that they propose;
+however, we quickly realized that even the simpler versions on which it was based
+were quite complex. We ended up only implementing one of the simpler versions
+that they used as a baseline, the Max-Min Ant System (MMAS) algorithm. MMAS
+was proposed by \cite{Sttzle2000MAXMINAS} in 2000, and is one of the most popular
+variations of ACO algorithms.
+
+The ant colony algorithm \cite{Skinderowicz_2022} mimics ants and their use of 
+pheromones in order to locate potential food sources. This is done by detecting 
+the concentration of each pheromone for each path and choosing based on 
+probability the path with more pheromone. The pheromone on each edge decreases 
+a little bit at each iteration, simulating the evaporation of pheromone that
+occurs in nature.
 Our implementation follows 5 steps:
 
 \begin{enumerate}
-  \item Initialize a population of n ants
-  \item Allow the ants to choose paths with more preference on shorter paths and with more preference on paths with a higher concentration of pheromones
-  \item For ants that achieved a valid route, choose the one that had the lowest cost and lay pheromone in proportion to the change in cost
-  \item Repeat steps 1-3 until the probability that our best route is optimal is sufficiently higher than a set probability.
+  \item Initialize a population of $n$ ants
+  \item Allow the ants to choose paths with more preference on shorter paths and
+  with more preference on paths with a higher concentration of pheromones
+  \item For ants that achieved a valid route, choose the one that had the lowest 
+  cost \cite{Sttzle2000MAXMINAS} and lay pheromone in proportion to the change 
+  in cost
+  \item Repeat steps 1-3 until either a time limit is reached, a set number of 
+  iterations has ran, or our pheromone matrix has converged to a constant value.
   \item Return our best solution gathered
 \end{enumerate}
 
@@ -62,7 +100,8 @@ space supplied by the cities and edges. This however may be suboptimal due to lo
 leading to smaller edges down the line.
 
 \subsection*{ACO Complexity}
-The complexity of each step of the ant colony optimization algorithm is as follows: 
+As described in \cite{Li2015EfficiencyIO} complexity of each step of the ant colony 
+optimization algorithm is as follows: 
 \begin{itemize}
   \item Initialize the variables - $\mathcal{O}(n^2 + m$)
   \item A solution matrix is generated for each ant - $\mathcal{O}(n^2 + m$)
@@ -72,34 +111,69 @@ The complexity of each step of the ant colony optimization algorithm is as follo
   \item Return result - $\mathcal{O}(1)$
 \end{itemize}
 
-In the following equations, $n$ is the number of nodes or cities connected to, and $m$ is the
+In the preceding equations, $n$ is the number of nodes or cities connected to, and $m$ is the
 number of ants used to process the distances between nodes. The space complexity of the algorithm 
 is described as $\mathcal{O}(n^2)$ + $\mathcal{O}(nm)$. The initial distance matrix is attributed
 to the $n^2$ and the $nm$ describes the space used where each ant's solution is stored before 
 choosing the best result. The time complexity can be described as $\mathcal{O}(I_{max}n^2m)$. 
-Each attribute between the maximum iterations, the amount of nodes, and number of ants contributes
+Since, without improving our convergence criterion, we don't have a guarantee that the algorithm
+will terminate unless we fix a bound for the number of iterations, any upper bound on time complexity
+has to be expressed as a function of $I_{max}$, as we have done. Each attribute between the maximum iterations, the amount of nodes, and number of ants contributes
 to the runtime of this algorithm. Our solution to the TSP problem using ant colony optimization
 differed from other solutions as we did not use a table to keep track of possible nodes to connect to.
 
 \section{Results}
-Please refer to Appendix 1 for results.
+Our results, and the hyperparemters used to generate them, are described in Table \ref{results-table}. With this
+choice of hyperparameters (which certainly did require some experimentation and fine-tuning), the
+algorithm consistently outperforms our baselines. We did not run for more than 200 Cities because
+at our fixed time limit of 10 minutes, it already was taking a ridiculous amount of time to get results.
 
 \section{Discussion and Analysis}
-We found that when searching for a solution for a lower number of nodes it was more effective to
-use the Greedy or Branch and Bound algorithms, but as the number of nodes increased, the Ant Colony
-Optimization algorithm greatly outperformed the others. This is due to the algorithm's ability to
+We found that when searching for a solution for a lower number of nodes it was just as, if not more 
+effective to use the Branch and Bound algorithm (which is guaranteed to find an optimal solution if
+given enough time), but as the number of nodes increased, the Ant Colony Optimization algorithm greatly 
+outperformed the others. This is due to the algorithm's ability to
 test multiple examples against themselves each time and find an optimal solution. This means that
 each algorithm used the maximum allotted time, but only our optimization algorithm was able to find 
 a more optimal solution when approaching a larger number of nodes in a network. 
 
 Pros: converges quickly towards a local solution while keeping variance in proportion to the number of iterations
-Cons: * Potential to get stuck in local minima with a smaller tau than sought after. This causes
+Cons: Potential to get stuck in local minima with a smaller tau than sought after. This causes
 the algorithm to effectively get stuck in an infinite loop until it runs into another local minima
 that has a lower cost. (to counter this we looked at integrating a iteration counter which limited
 the number of iterations after obtaining a solution)
 
 \section{Future Work}
-add some stuff here
+We realized after we had done our empirical analysis that we had missed an
+aspect of the ACO algorithm which we likely should have included---something that
+\cite{Li2015EfficiencyIO} calls a ``tabu table'', and that was described in a more
+cursory fashion by \cite{Sttzle2000MAXMINAS} as the list of candidate cities which
+ants primarily focus on traveling to at each decision point. For example, suppose
+ant $k$ is currently located at city $i$. The list of candidate cities that the ant
+considers traveling to from city $i$ is the subset of the $c$ cities closes to $i$,
+denoted $\mathcal{N}_i^k$, which ant $k$ has not yet visited. The parameter $c$ would
+be set manually beforehand (in the two papers we read, they both used $c=16$), and 
+this would thus greatly restrict the space of possibilities over which we would compute
+the probability distribution at each decision point. In the case where the ant has already
+visited all $c$ cities closest to $i$, then the ant's choice would become more deterministic,
+and it would just travel to the city with the lowest cost that it has not yet visited. Clearly, this
+process would speed up the computation of each step, and we believe it could lead to improved
+results.
+
+Just as important of a change that we would like to make is improving our criterion for convergence.
+We did not specify a fixed number of iterations for our algorithm, but instead tried to use
+the notion of convergence described in \cite{Sttzle2000MAXMINAS}. However, this only worked in about
+50-60\% of the cases that we tried---the algorithm would instead often run to the time limit. We 
+believe that further investigation would tell us why this is the case, and by fixing those parameters
+we could help the algorithm converge earlier.
+
+Finally, with more time, we would like to tune our hyperparameters more thoroughly and carefully,
+and identify in what types of regimes they work best. We would also like to explore the
+literature on this topic more deeply, since many more people, far smarter than us, have
+been researching in this space for far longer. We acknowledge that we have only scratched the
+surface, but have learned a lot in the process.
+
+% \csvautotabular{table.csv}
 
 %% ---------------------------
 %% Bibliography and postamble
