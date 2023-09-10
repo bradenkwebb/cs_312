@@ -18,3 +18,5 @@ Although TSP is NP-hard, many heuristic-based approximation algorithms can be ap
 
 ### Project 6: Ant Colony Optimization for TSP
 This was a group project that I led in implementing a version of the stochastic, multi-agent Max-Min Ant Colony Optimization (ACO) algorithm [(Stützle & Hoos, 2000)](https://doi.org/10.1016/S0167-739X(00)00043-1) as an improvement upon the work done in Project 5. We went above and beyond in searching through relevant current literature and trying to understand the various ACO approaches that exist. I would have gladly put more time into this assignment if they had given us more time before finals week began, but I still ended up pretty happy with our final product.
+
+I also spent a lot of time formatting that write-up in LaTeX in my local editor rather than on Overleaf. That was the first time I'd used LaTeX that way, and the `group_tsp_report` directory is still quite messy because of it - including the entire raw README.md from the original PaperShell repository that I cloned at the beginning. Maybe some day I'll get around to cleaning that up.
